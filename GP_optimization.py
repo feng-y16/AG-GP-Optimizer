@@ -12,8 +12,6 @@ class STABLEOPT:
         self.sigma_0=sigma_0
         self.sigma=sigma
         self.t=0
-        self.mu_temp=mu_0#mu_{t-1}
-        self.sigma_temp=sigma_0#sigma_{t-1}
         self.beta=beta
         self.epsilon=epsilon
         self.T=len(beta)
