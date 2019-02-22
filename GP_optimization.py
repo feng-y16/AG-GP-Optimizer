@@ -12,7 +12,7 @@ class STABLEOPT:
         self.thetai=np.ones(D)
         self.sigma2=1
         self.mu0=mu0
-        self.init_num=10
+        self.init_num=init_num
         self.iter=iter
         self.t=0
         self.beta=beta
@@ -22,6 +22,9 @@ class STABLEOPT:
         self.x=np.zeros((self.T,self.D))
         self.y=np.zeros(self.T)
         self.results=-10000*np.ones(self.T)
+        self.bound=self.epsilon*np.ones((D,2))
+        for i in range(0,D):
+            self.bound[i][0]=-self.epsilon
 
     def k(self,x1,x2):
         r=0
@@ -83,9 +86,9 @@ class STABLEOPT:
         return self.y[self.t-1]
 
     def init(self):#feed initial data
-        x=random.gauss(0,5)
-        y=random.gauss(0,5)
-        z=random.gauss(0,5)
+        x=random.uniform(-30,30)
+        y=random.uniform(-30,30)
+        z=random.uniform(-30,30)
         self.x[self.t]=np.array([x,y,z])
         #if self.t>1:
         #    while not (np.unique(self.x[range(0,self.t+1)])==self.x[range(0,self.t+1)]):
@@ -115,7 +118,7 @@ class STABLEOPT:
             bound[i][0]=-1000000
             bound[i][1]=1000000
         bound[self.D+2][0]=0
-        x_opt=ZOSGD_bounded(log_likehood,np.ones(self.D+3),bound,1,0.5,500)
+        x_opt=ZOSGD_bounded(log_likehood,np.ones(self.D+3),bound,1,0.03,100)
         self.theta0=x_opt[0]
         self.thetai=x_opt[range(1,self.D+1)]
         self.mu0=x_opt[self.D+1]
@@ -170,15 +173,17 @@ class STABLEOPT:
             x=np.zeros(self.D)
             delta=np.zeros(self.D)
             for i in range(0,iter):
-                x=ZOSGA(ucb,x,0.3,0.5,5)-delta
-                delta=ZOSGA_bounded(ucb,x,self.epsilon*np.ones((self.D,2)),0.05,0.5,5)
-            delta=ZOSGA_bounded(lcb,x,self.epsilon*np.ones((self.D,2)),0.05,0.5,50)
+                x=ZOSGA(ucb,x,0.3,0.05,2)-delta
+                delta=ZOSGD_bounded(ucb,x,self.bound,0.05,0.05,2)
+            delta=ZOSGD_bounded(lcb,x,self.bound,0.05,0.05,50)
             self.x[self.t]=x+delta
             #while not (np.unique(self.x[range(0,self.t+1)])==self.x[range(0,self.t+1)]):
             #    self.x[self.t]=self.x[self.t]+np.random.multivariate_normal(np.zeros(self.D),0.01*np.identity(self.D))
             print("selected x+delta=",end="")
             print(x+delta)
             max_value=self.observe(self.x[self.t])
+            print("function value=",end="")
+            print(max_value)
             self.results[self.t-1]=max_value#note that t has increased
         else:
             print("t error!")
@@ -189,6 +194,7 @@ class STABLEOPT:
             self.init()
         print("Init done")
         for i in range(0,self.T-self.init_num):
+            print("##################################################################")
             print(i+1,end="")
             print("/",end="")
             print(self.T-self.init_num)
@@ -209,20 +215,28 @@ class STABLEOPT:
             if self.sigma2<=0:
                 print("Prior sigma invaild!")
             self.run_onestep(self.iter)
+        print("Done.")
+        print("##################################################################")
         index=np.where(self.results==np.max(self.results))
         print("Decision:",end="")
         print(self.x[index][0])
+        print("Max value=",end="")
+        print(self.results[index])
         print("Error:",end="")
         print(self.dis_fun(self.x[index][0],0.5*np.ones(self.D)))
         return 0
     def print(self):
+        print("##################################################################")
+        print("X:")
         print(self.x)
+        print("y:")
         print(self.y)
+        print("Function values")
         print(self.results)
 
 if __name__=="__main__":
-    #print(ZOSGD_bounded(test,[30,30],[[-50,50],[-50,50]],1,0.2,1000))
-    #print(ZOSGD(test,[30,30],1,0.2,1000))
-    optimizer=STABLEOPT(beta=4*np.ones(20),init_num=10,mu0=0,epsilon=0.2,D=3,iter=50)
+    #print(ZOSGD_bounded(test,[30,30],[[-50,50],[-50,50]],1,0.01,200))
+    #print(ZOSGD(test,[30,30],1,0.01,200))
+    optimizer=STABLEOPT(beta=4*np.ones(30),init_num=20,mu0=0,epsilon=0.2,D=3,iter=50)
     optimizer.run()
     optimizer.print()
