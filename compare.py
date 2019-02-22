@@ -2,8 +2,8 @@ from __future__ import print_function
 import numpy as np
 import random
 import math
-from GP_optimization import *
-from GP_AG_utils import *
+from GP_optimizer import *
+from AG_GP_utils import *
 
 def f_AG(x):
     D=len(x)
