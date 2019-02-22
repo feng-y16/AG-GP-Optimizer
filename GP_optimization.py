@@ -152,11 +152,11 @@ class STABLEOPT:
             index=np.where(self.results==np.max(self.results))
             return self.x[index][0]
         if self.init_point_option==2:
-            index=random.randint(0,t-1)
+            index=random.randint(0,self.t-1)
             return self.x[index]
         if self.init_point_option==3:
             results=self.results[range(0,self.t)]
-            results=results+np.min(results)
+            results=results-np.min(results)
             results=results/np.sum(results)
             p=random.uniform(0,1)
             temp=0
@@ -250,7 +250,7 @@ class STABLEOPT:
         print(self.x[index][0])
         print("Max value=",end="")
         print(self.results[index])
-        print("Error:",end="")
+        print("Error:",end="")#这是和全局最大值比较，并没有仔细算rubust最大值，可能有误差
         print(self.dis_fun(self.x[index][0],0.5*np.ones(self.D)))
         return 0
     def print(self):
@@ -265,6 +265,6 @@ class STABLEOPT:
 if __name__=="__main__":
     #print(ZOSGD_bounded(test,[30,30],[[-50,50],[-50,50]],1,0.01,200))
     #print(ZOSGD(test,[30,30],1,0.01,200))
-    optimizer=STABLEOPT(beta=4*np.ones(30),init_num=20,mu0=0,epsilon=0.2,D=3,iter=50)
+    optimizer=STABLEOPT(beta=4*np.ones(30),init_num=20,mu0=0,epsilon=0.2,D=3,iter=50,init_point_option="best point")
     optimizer.run()
     optimizer.print()
