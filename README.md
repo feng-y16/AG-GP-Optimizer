@@ -1,2 +1,2 @@
-# GP-AG-Optimizer
+# AG-GP-Optimizer
 Based on Adversarially Robust Optimization with Gaussian Processes
