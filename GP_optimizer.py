@@ -198,8 +198,8 @@ class STABLEOPT:
             x=self.select_init_point()
             delta=np.zeros(self.D)
             for i in range(0,iter):
-                x=ZOSGA(ucb,x,self.step[0],self.lr[0],2)-delta
-                delta=ZOSGD_bounded(ucb,x,self.bound,self.step[1],self.lr[1],2)
+                x=ZOSGA(ucb,x,self.step[0],self.lr[0],1)-delta
+                delta=ZOSGD_bounded(ucb,x,self.bound,self.step[1],self.lr[1],1)
             delta=ZOSGD_bounded(lcb,x,self.bound,self.step[0],self.lr[0],50)
             self.x[self.t]=x+delta
             #while not (np.unique(self.x[range(0,self.t+1)])==self.x[range(0,self.t+1)]):
@@ -248,7 +248,7 @@ class STABLEOPT:
         print("Max value=",end="")
         print(self.results[index])
         print("Error:",end="")#这是和全局最大值比较，并没有仔细算rubust最大值，可能有误差
-        print(distance_fun(self.x[index][0],0.5*np.ones(self.D)))
+        print(distance_fun(self.x[index][0],0.5*np.ones(self.D)))#使用无穷范数衡量
         return 0
     def print(self):
         print("##################################################################")
@@ -261,8 +261,8 @@ class STABLEOPT:
 
 if __name__=="__main__":
     random.seed(10)
-    #print(ZOSGD_bounded(test,[30,30],[[-50,50],[-50,50]],1,0.01,200))
-    #print(ZOSGD(test,[30,30],1,0.01,200))
+    #print(ZOSGA_bounded(f,[30,30,30],[[-50,50],[-50,50],[-50,50]],1,0.01,200))
+    #print(ZOSGA(f,[30,30,30],1,0.01,200))
     optimizer=STABLEOPT(beta=4*np.ones(30),init_num=20,mu0=0,epsilon=0.2,D=3,iter=50,step=[0.3,0.05],lr=[0.05,0.05],init_point_option="best point")
     optimizer.run()
     optimizer.print()
