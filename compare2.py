@@ -3,8 +3,11 @@ import numpy as np
 import random
 import math
 import time
-from GP_optimizer import *
-from AG_GP_utils import *
+from matplotlib import pyplot as plt
+from GP_optimizer2 import *
+from AG_GP_utils2 import *
+
+
 
 def f_AG(x):#将GP论文里面的优化函数转换为适用于AG的目标函数
     D=len(x)
@@ -16,26 +19,39 @@ def f_AG(x):#将GP论文里面的优化函数转换为适用于AG的目标函数
 def AG_init_point():#AG方法初始点的选取，其中x0就是GP论文里的x，y0是delta
     x0=np.zeros(dimension)
     y0=np.zeros(dimension)
+    x0[0]=random.uniform(-0.95,3.2)
+    x0[1]=random.uniform(-0.45,4.4)
     for i in range(0,dimension):
-        x0[i]=random.uniform(-30,30)
         y0[i]=random.uniform(-epsilon,epsilon)
     return x0,y0
 
+def make_hist(num,x0,y0):
+    hist=np.zeros(num)
+    for i in range(0,num):
+        print(i)
+        x_opt,y_opt=AG_maxmin_minbounded_f(f_AG,x0,y0,step=[0.5,0.1],lr=[0.05,0.0001],dis_fun=distance_fun, epsilon=epsilon,iter=100,inner_iter=2,last_iter=50)    
+        hist[i]=distance_fun(x_opt,[-0.195,0.284])
+    plt.hist(hist,100)
+    plt.xlabel("error")
+    plt.ylabel("times")
+    plt.show()
+
 if __name__=="__main__":
     random.seed(10)
-    dimension=3
-    epsilon=0.2
+    dimension=2
+    epsilon=0.5
 
+    x0,y0=AG_init_point()
+    make_hist(100,x0,y0)
     print("AG method")
     time_start=time.time()
-    x0,y0=AG_init_point()
-    x_opt,y_opt=AG_maxmin_minbounded(f_AG,x0,y0,step=[1,0.001],lr=[0.5,0.01],epsilon=epsilon,iter=100,inner_iter=2,last_iter=50)
+    x_opt,y_opt=AG_maxmin_minbounded_f(f_AG,x0,y0,step=[0.5,0.1],lr=[0.05,0.0001],dis_fun=distance_fun, epsilon=epsilon,iter=100,inner_iter=2,last_iter=50)
     print("Decision:",end="")
-    print(x_opt+y_opt)
+    print(x_opt)
     print("Max value=",end="")
     print(f(x_opt+y_opt))
     print("Error:",end="")
-    print(distance_fun(x_opt+y_opt,0.5*np.ones(dimension)))#使用无穷范数衡量
+    print(distance_fun(x_opt,[-0.195,0.284]))#使用无穷范数衡量
     time_end=time.time()
     print('Time cost of AG:',time_end-time_start,"s")
 

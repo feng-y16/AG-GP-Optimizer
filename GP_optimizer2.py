@@ -2,7 +2,8 @@ from __future__ import print_function
 import numpy as np
 import random
 import math
-from AG_GP_utils import *
+from AG_GP_utils import ZOSGD_bounded
+from AG_GP_utils2 import *
 
 class STABLEOPT:
     def __init__(self,beta,init_num,mu0,epsilon,D,iter=100,step=[0.3,0.05],lr=[0.05,0.05],init_point_option="function value weighted"):
@@ -22,9 +23,6 @@ class STABLEOPT:
         self.results=-10000*np.ones(self.T)#函数值
         self.step=step#对于x和delta的计算梯度的步长
         self.lr=lr#对于x和delta的学习率
-        self.bound=self.epsilon*np.ones((D,2))#delta的每一维的上下界（无穷范数意义下）
-        for i in range(0,D):
-            self.bound[i][0]=-self.epsilon
         self.iter_initial_point=np.zeros(D)#第一次迭代的起始点
         if init_point_option=="best point":#过去最优点开始迭代
             self.init_point_option=1
@@ -93,8 +91,8 @@ class STABLEOPT:
 
     def init(self):#初始添加观测数据
         x=[]
-        for i in range(0,self.D):
-            x.append(random.uniform(-30,30))
+        x.append(random.uniform(-0.95,3.2))
+        x.append(random.uniform(-0.45,4.4))
         self.x[self.t]=np.array(x)
         #if self.t>1:
         #    while not (np.unique(self.x[range(0,self.t+1)])==self.x[range(0,self.t+1)]):
@@ -124,7 +122,7 @@ class STABLEOPT:
             bound[i][0]=-1000000
             bound[i][1]=1000000
         bound[self.D+2][0]=0#优化区域。实际上除了sigma平方大于0，无别的限制
-        x_opt=ZOSGD_bounded(log_likehood,np.ones(self.D+3),bound,1,0.03,100)
+        x_opt=ZOSGD_bounded(log_likehood,np.ones(self.D+3),bound,5,1e-2,100)
         self.theta0=x_opt[0]
         self.thetai=x_opt[range(1,self.D+1)]
         self.mu0=x_opt[self.D+1]
@@ -199,8 +197,8 @@ class STABLEOPT:
             delta=np.zeros(self.D)
             for i in range(0,iter):
                 x=ZOSGA(ucb,x,self.step[0],self.lr[0],1)-delta
-                delta=ZOSGD_bounded(ucb,x,self.bound,self.step[1],self.lr[1],1)
-            delta=ZOSGD_bounded(lcb,x,self.bound,self.step[0],self.lr[0],50)
+                delta=ZOSGD_bounded_f(ucb,x,distance_fun,self.epsilon,self.step[1],np.zeros(len(x)),self.lr[1],1)
+            delta=ZOSGD_bounded_f(lcb,x,distance_fun,self.epsilon,self.step[0],np.zeros(len(x)),self.lr[0],50)
             self.x[self.t]=x+delta
             #while not (np.unique(self.x[range(0,self.t+1)])==self.x[range(0,self.t+1)]):
             #    self.x[self.t]=self.x[self.t]+np.random.multivariate_normal(np.zeros(self.D),0.01*np.identity(self.D))
@@ -248,7 +246,7 @@ class STABLEOPT:
         print("Max value=",end="")
         print(self.results[index])
         print("Error:",end="")
-        print(distance_fun(self.x[index][0],0.5*np.ones(self.D)))#使用无穷范数衡量
+        print(distance_fun(self.x[index][0],[0.195,0.284]))
         return 0
     def print(self):
         print("##################################################################")
