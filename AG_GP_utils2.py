@@ -92,6 +92,7 @@ def ZOSGD_bounded_f(func,x0,dis_f,epsilon,step,x_cen,lr=0.1,iter=100,Q=10):#x0�
             grad=(func(x0+u)-func(x0))/step
             dx=dx-lr*D*grad*u/Q
         if dis_f(x_opt+dx,x_cen)>epsilon:
+            print("!")
             lr=lr*0.9#越界则减小步长和学习率
             step=step*0.9
             continue
@@ -163,18 +164,11 @@ def AG_maxmin_bounded_f(func,x0,y0,step,lr,dis_fun,epsilon_x,epsilon_y,iter=20,i
     x_opt=x0
     y_opt=y0
     flag=0
-    best_f=f(np.hstack((x0,y0)))
+    best_f=-1000000
+    AG_iter_res=np.zeros(iter)
     for i in range(0,iter):
         def func_yfixed(x):
             return func(np.hstack((x,y_opt)))
-        temp_f=func_yfixed(x_opt)
-        if func_yfixed(x_opt)>best_f:
-            best_f=temp_f
-        else:
-            flag=flag+1
-        if flag%3==0:
-            step[0]=step[0]*0.9
-            lr[0]=lr[0]*0.9
         x_opt=(ZOSGA_bounded_f(func_yfixed,x_opt,dis_fun,epsilon_x,step[0],x0,lr[0],inner_iter))
         #print("x_opt=",end="")
         #print(x_opt)
@@ -187,7 +181,20 @@ def AG_maxmin_bounded_f(func,x0,y0,step,lr,dis_fun,epsilon_x,epsilon_y,iter=20,i
         y_opt=(ZOSGD_bounded_f(func_xfixed,y_opt,dis_fun,epsilon_y,step[1],np.zeros(len(y0)),lr[1],inner_iter))
         #print("y_opt=",end="")
         #print(y_opt)
-    return x_opt,y_opt
+        temp_f=func_yfixed(x_opt+y_opt)
+        AG_iter_res[i]=temp_f
+        if temp_f>best_f:
+            best_f=temp_f
+        else:
+            flag=flag+1
+        if flag%3==0:
+            step[0]=step[0]*0.9
+            lr[0]=lr[0]*0.9
+    temp=ZOSGD_bounded_f(f,x_opt,distance_fun,epsilon_y,0.2,x_opt,lr=0.002,iter=500,Q=10)
+    y_opt=x_opt-temp
+    #print(y_opt)
+    AG_iter_res[iter-1]=f(temp)
+    return x_opt,y_opt,AG_iter_res
 
 def AG_maxmin_minbounded_f(func,x0,y0,step,lr,dis_fun,epsilon,iter=20,inner_iter=2,last_iter=50):#x0：外层max迭代起始点，y0:内层min迭代起始点，step：计算梯度所用步长（x，y各一个），lr：学习率（x，y各一个），dis_fun:距离函数，epsilon：y的范数的上界，iter：迭代次数，inner_iter：内层迭代次数，last_iter：最后算y的迭代次数
     D_x=len(x0)
@@ -196,8 +203,8 @@ def AG_maxmin_minbounded_f(func,x0,y0,step,lr,dis_fun,epsilon,iter=20,inner_iter
     bound_y=epsilon*np.ones((D_y,2))
     bound_x[:,0]=-bound_x[:,0]
     bound_y[:,0]=-bound_y[:,0]
-    x_opt,y_opt=AG_maxmin_bounded_f(func,x0,y0,step,lr,dis_fun,1000000,epsilon,iter,inner_iter,last_iter)
-    return x_opt,y_opt
+    x_opt,y_opt,AG_iter_res=AG_maxmin_bounded_f(func,x0,y0,step,lr,dis_fun,1000000,epsilon,iter,inner_iter,last_iter)
+    return x_opt,y_opt,AG_iter_res
 
 def f(x):#优化目标函数
     x_=x[0]
