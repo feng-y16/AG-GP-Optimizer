@@ -24,6 +24,7 @@ class STABLEOPT:
         self.step=step#对于x和delta的计算梯度的步长
         self.lr=lr#对于x和delta的学习率
         self.iter_initial_point=np.zeros(D)#第一次迭代的起始点
+        self.iter_res=np.zeros(self.T-init_num)
         if init_point_option=="best point":#过去最优点开始迭代
             self.init_point_option=1
             return
@@ -98,7 +99,7 @@ class STABLEOPT:
         #    while not (np.unique(self.x[range(0,self.t+1)])==self.x[range(0,self.t+1)]):
         #        self.x[self.t]=self.x[self.t]+np.random.multivariate_normal(np.zeros(self.D),0.01*np.identity(self.D))
         self.y[self.t]=self.get_value(np.array(x))
-        self.results[self.t]=self.y[self.t]
+        self.results[self.t]=f(ZOSGD_bounded_f(f,self.x[self.t],distance_fun,self.epsilon,0.1,self.x[self.t],self.lr[1],100))
         self.t=self.t+1
         return 0
 
@@ -142,6 +143,12 @@ class STABLEOPT:
                 mu[i]=self.mu0+((np.array(self.k_t(x[i])).T).dot(inv)).dot(self.y[0:self.t]-np.mean(self.y[0:self.t]))
                 return mu
     
+    def get_iter_res(self):
+        for i in range(0,self.T-self.init_num):
+            temp=self.results[0:i+self.init_num+1]
+            index=np.where(temp==np.max(temp))
+            self.iter_res[i]=temp[int(index[0])]
+
     def select_init_point(self):
         if self.init_point_option==1:
             index=np.where(self.results==np.max(self.results))
@@ -194,20 +201,23 @@ class STABLEOPT:
                         sigma_square=0
                 return mu-np.sqrt(self.beta[self.t]*sigma_square)
             x=self.select_init_point()
+            if self.t==self.init_num:
+                self.iter_initial_point=x
             delta=np.zeros(self.D)
             for i in range(0,iter):
                 x=ZOSGA(ucb,x,self.step[0],self.lr[0],1)-delta
                 delta=ZOSGD_bounded_f(ucb,x,distance_fun,self.epsilon,self.step[1],np.zeros(len(x)),self.lr[1],1)
-            delta=ZOSGD_bounded_f(lcb,x,distance_fun,self.epsilon,self.step[0],np.zeros(len(x)),self.lr[0],50)
+            delta=ZOSGD_bounded_f(lcb,x,distance_fun,self.epsilon,self.step[1],np.zeros(len(x)),self.lr[1],100)
             self.x[self.t]=x+delta
             #while not (np.unique(self.x[range(0,self.t+1)])==self.x[range(0,self.t+1)]):
             #    self.x[self.t]=self.x[self.t]+np.random.multivariate_normal(np.zeros(self.D),0.01*np.identity(self.D))
             print("Selected x+delta=",end="")
             print(x+delta)
-            fun_value=self.observe(self.x[self.t])
+            fun_value=f(ZOSGD_bounded_f(f,self.x[self.t],distance_fun,self.epsilon,self.step[1],self.x[self.t],self.lr[1],100))
             print("Function value=",end="")
             print(fun_value)
             self.results[self.t-1]=fun_value#这里t在self.observe()已经更新为现有的点的个数，从而需要-1
+            self.observe(x+delta)
         else:
             print("t value error!")
             return 0
@@ -217,7 +227,6 @@ class STABLEOPT:
             self.init()
         print("Init done")
         for i in range(0,self.T-self.init_num):
-            print("##################################################################")
             print(i+1,end="")
             print("/",end="")
             print(self.T-self.init_num)#需要通过贝叶斯方法采样的点的数目
@@ -238,13 +247,14 @@ class STABLEOPT:
             if self.sigma2<=0:
                 print("Prior sigma invaild!")
             self.run_onestep(self.iter)
+        self.get_iter_res()
         print("Done.")
-        print("##################################################################")
+        print("")
         index=np.where(self.results==np.max(self.results))
         print("Decision:",end="")
         print(self.x[index][0])
         print("Max value=",end="")
-        print(self.results[index])
+        print(self.results[index][0])
         print("Error:",end="")
         print(distance_fun(self.x[index][0],[0.195,0.284]))
         return 0
