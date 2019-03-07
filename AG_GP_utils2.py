@@ -92,7 +92,7 @@ def ZOSGD_bounded_f(func,x0,dis_f,epsilon,step,x_cen,lr=0.1,iter=100,Q=10):#x0�
             grad=(func(x0+u)-func(x0))/step  ### SL's question:  this should be func(x0 + delta + step * u ), gradient estimation is wrong.
             dx=dx-lr*D*grad*u/Q ### SL' question: dx is the average descent direction, right??
         if dis_f(x_opt+dx,x_cen)>epsilon: ### SL's question: why do you need it?? Doing projection, not a correct way.
-            print("!")
+            #print("!")
             lr=lr*0.9#越界则减小步长和学习率
             step=step*0.9
             continue
@@ -165,7 +165,7 @@ def AG_maxmin_bounded_f(func,x0,y0,step,lr,dis_fun,epsilon_x,epsilon_y,iter=20,i
     y_opt=y0
     flag=0
     best_f=-1000000
-    AG_iter_res=np.zeros(iter)
+    AG_iter_res=np.zeros((iter,len(x0)))
     for i in range(0,iter):
         def func_yfixed(x):
             return func(np.hstack((x,y_opt)))
@@ -182,7 +182,7 @@ def AG_maxmin_bounded_f(func,x0,y0,step,lr,dis_fun,epsilon_x,epsilon_y,iter=20,i
         #print("y_opt=",end="")
         #print(y_opt)
         temp_f=func_yfixed(x_opt+y_opt)
-        AG_iter_res[i]=temp_f
+        AG_iter_res[i]=x_opt
         if temp_f>best_f:
             best_f=temp_f
         else:
@@ -190,10 +190,9 @@ def AG_maxmin_bounded_f(func,x0,y0,step,lr,dis_fun,epsilon_x,epsilon_y,iter=20,i
         if flag%3==0:
             step[0]=step[0]*0.9
             lr[0]=lr[0]*0.9
-    temp=ZOSGD_bounded_f(f,x_opt,distance_fun,epsilon_y,0.2,x_opt,lr=0.002,iter=500,Q=10)
+    temp=ZOSGD_bounded_f(f,x_opt,distance_fun,epsilon_y,0.1,x_opt,lr=0.005,iter=500,Q=10)
     y_opt=x_opt-temp
     #print(y_opt)
-    AG_iter_res[iter-1]=f(temp)
     return x_opt,y_opt,AG_iter_res
 
 def AG_maxmin_minbounded_f(func,x0,y0,step,lr,dis_fun,epsilon,iter=20,inner_iter=2,last_iter=50):#x0：外层max迭代起始点，y0:内层min迭代起始点，step：计算梯度所用步长（x，y各一个），lr：学习率（x，y各一个），dis_fun:距离函数，epsilon：y的范数的上界，iter：迭代次数，inner_iter：内层迭代次数，last_iter：最后算y的迭代次数

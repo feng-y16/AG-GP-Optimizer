@@ -4,8 +4,8 @@ import random
 import math
 import time
 from matplotlib import pyplot as plt
-from GP_optimizer2 import *
-from AG_GP_utils2 import *
+from GP_optimizer2_review import *
+from AG_GP_utils2_review import *
 
 
 
@@ -36,19 +36,32 @@ def make_hist(num,x0,y0):
     plt.ylabel("times")
     plt.show()
 
-def make_iter_compare(data1,data2,data3,name1="1",name2="2",name3="3"):
+def max_first_i_indexes(data):
+    res=np.zeros(len(data))
+    for i in range(1,len(data)+1):
+        temp=data[0:i]
+        index=np.where(temp==np.min(temp))
+        res[i-1]=data[int(index[0])]
+    return res
+
+def make_iter_compare(data1,data2,name1="1",name2="2"):
     #print(data1)
     #print(data2)
     #print(data3)
-    p1,=plt.plot(range(0,np.shape(data1)[0]),data1)
-    p2,=plt.plot(range(0,np.shape(data2)[0]),data2)
-    p3,=plt.plot(range(0,np.shape(data3)[0]),data3)
-    plt.legend([p1, p2, p3], [name1, name2, name3], loc='upper left')
-    plt.xlabel("number of iterations")
-    plt.ylabel("function value")
+    y1=max_first_i_indexes(data1)
+    y2=max_first_i_indexes(data2)
+    p1,=plt.plot(range(0,np.shape(data1)[0]),y1)
+    p2,=plt.plot(range(0,np.shape(data2)[0]),y2)
+    #p3,=plt.plot(range(0,np.shape(data3)[0]),data3)
+    #plt.legend([p1, p2, p3], [name1, name2, name3], loc='upper left')
+    plt.legend([p1, p2], [name1, name2], loc='upper left')
+    plt.xlabel("Number of iterations")
+    plt.ylabel("Regret")
     plt.show()
 
 def compare(dimension,epsilon,data_point_num, select_point_num):
+    random.seed(10)
+
     print("##################################################################")
     print("STABLEOPT method")
     time_start=time.time()
@@ -56,7 +69,8 @@ def compare(dimension,epsilon,data_point_num, select_point_num):
     optimizer.run()
     time_end=time.time()
     print('Time cost of STABLEOPT:',time_end-time_start,"s")
-    STABLEOPT_iter_res=optimizer.iter_res
+    #STABLEOPT_iter_res=optimizer.iter_res
+    STABLEOPT_iter_res=optimizer.x[optimizer.init_num:optimizer.T]
 
     print("##################################################################")
     x0,y0=AG_init_point(dimension,epsilon)
@@ -74,21 +88,37 @@ def compare(dimension,epsilon,data_point_num, select_point_num):
     time_end=time.time()
     print('Time cost of AG:',time_end-time_start,"s")
 
-    gt_value=f(ZOSGD_bounded_f(f,[-0.195,0.284],distance_fun,epsilon,0.1,[-0.195,0.284],lr=0.005,iter=100,Q=10))
+    gt_value=[-0.195,0.284]
+    #gt_value=f(ZOSGD_bounded_f(f,[-0.195,0.284],distance_fun,epsilon,0.1,[-0.195,0.284],lr=0.005,iter=500,Q=10))
     np.savez('data.npz', STABLEOPT_iter_res= STABLEOPT_iter_res, AG_iter_res= AG_iter_res, gt_value= gt_value)
 
-def load_data_and_plot():
+def select_min_ZOSGD_multitimes(x,epsilon,times):
+    min=1000000
+    para=np.linspace(0.5,1.5,times)
+    for j in range(0,times):
+        temp=f(ZOSGD_bounded_f(f,x,distance_fun,epsilon,0.1*para[j],x,lr=0.005*para[j],iter=500,Q=10))
+        if temp<min:
+            min=temp
+    return min
+
+def load_data_and_plot(epsilon,select_point_num):
     data=np.load("data.npz")
-    STABLEOPT_iter_res=data["STABLEOPT_iter_res"]
-    AG_iter_res=data["AG_iter_res"]
-    gt_value=data["gt_value"]
-    make_iter_compare(STABLEOPT_iter_res,AG_iter_res,gt_value*np.ones(len(AG_iter_res)),"STABLEOPT","AG","Global robust value")
+    STABLEOPT=data["STABLEOPT_iter_res"]
+    AG=data["AG_iter_res"]
+    gt=data["gt_value"]
+    STABLEOPT_iter_res_y=np.zeros(select_point_num)
+    AG_iter_res_y=np.zeros(select_point_num)
+    for i in range(0,select_point_num):
+        STABLEOPT_iter_res_y[i]=select_min_ZOSGD_multitimes(STABLEOPT[i],epsilon,5)
+        AG_iter_res_y[i]=select_min_ZOSGD_multitimes(AG[i],epsilon,5)
+    gt_value_y=select_min_ZOSGD_multitimes(gt,epsilon,5)
+    make_iter_compare(gt_value_y*np.ones(select_point_num)-STABLEOPT_iter_res_y,gt_value_y*np.ones(select_point_num)-AG_iter_res_y,"STABLEOPT","AG")
 
 if __name__=="__main__":
-    random.seed(10)
-    compare(dimension=2,epsilon=0.5,data_point_num=20,select_point_num=100)
+    select_point_num=2
+    compare(dimension=2,epsilon=0.5,data_point_num=10,select_point_num=select_point_num)
     #dimension=2
     #epsilon=0.5
     #x0,y0=AG_init_point(dimension,epsilon)
     #x_opt,y_opt,AG_iter_res=AG_maxmin_minbounded_f(f_AG,x0,y0,step=[1.2,0.2],lr=[0.03,0.0001],dis_fun=distance_fun, epsilon=epsilon,iter=100,inner_iter=2,last_iter=100)
-    load_data_and_plot()
+    load_data_and_plot(epsilon=0.5,select_point_num=select_point_num)
