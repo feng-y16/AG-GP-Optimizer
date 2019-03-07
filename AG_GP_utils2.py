@@ -34,7 +34,7 @@ def ZOSGD(func,x0,step,lr=0.1,iter=100,Q=10):#x0：迭代起始点，step：计�
             if flag%2==0:#多次效果波动，则减小步长和学习率
                 step=step*0.95
                 lr=lr*0.95
-            p=2**(-i-1)
+            p=2**(-i-1) ### SL's question, why do we need it??
             if np.random.uniform()<p:#如果优化结果变差，也有一定概率接受
                 x_opt=x_temp
     return x_opt
@@ -52,7 +52,7 @@ def ZOSGA(func,x0,step,lr=0.1,iter=100,Q=10):#x0：迭代起始点，step：计�
             u_norm = np.linalg.norm(u)
             u = u / u_norm*step
             grad=(func(x0+u)-func(x0))/step
-            dx=dx+lr*D*grad*u/Q
+            dx=dx+lr*D*grad*u/Q ### SL: this is plus sign, checked.
         x_temp=x_opt+dx
         y_temp=func(x_temp)
         #print("x_opt=",end="")
@@ -89,9 +89,9 @@ def ZOSGD_bounded_f(func,x0,dis_f,epsilon,step,x_cen,lr=0.1,iter=100,Q=10):#x0�
             u = np.random.normal(0, sigma, D)
             u_norm = np.linalg.norm(u)
             u = u / u_norm*step
-            grad=(func(x0+u)-func(x0))/step
-            dx=dx-lr*D*grad*u/Q
-        if dis_f(x_opt+dx,x_cen)>epsilon:
+            grad=(func(x0+u)-func(x0))/step  ### SL's question:  this should be func(x0 + delta + step * u ), gradient estimation is wrong.
+            dx=dx-lr*D*grad*u/Q ### SL' question: dx is the average descent direction, right??
+        if dis_f(x_opt+dx,x_cen)>epsilon: ### SL's question: why do you need it?? Doing projection, not a correct way.
             print("!")
             lr=lr*0.9#越界则减小步长和学习率
             step=step*0.9
@@ -115,7 +115,7 @@ def ZOSGD_bounded_f(func,x0,dis_f,epsilon,step,x_cen,lr=0.1,iter=100,Q=10):#x0�
                 step=step*0.95
                 lr=lr*0.95
             p=2**(-i-1)
-            if np.random.uniform()<p:#如果优化结果变差，也有一定概率接受
+            if np.random.uniform()<p:#如果优化结果变差，也有一定概率接受 ### SL's question: I do not understand it.
                 x_opt=x_temp
     return x_opt
 
